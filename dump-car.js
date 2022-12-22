@@ -43,10 +43,8 @@ function readVarint(data, offset) {
     for (let block of blocks) {
         const { blockLength, data, startOffset } = block;
         console.log(`\nBlock at offset ${startOffset} with length ${blockLength}`);
-        console.log(data);
 
-        const cidBytes = readCID(data);
-        // const remainingData = data.subarray(cidBytes.length);
+        const blockInfo = readBlock(data);
     }
 
 })().catch(err => {
@@ -113,7 +111,6 @@ function readProto(data, processField) {
 }
 
 function readPBLink(data) {
-    console.log('readPBLink', data.toString('hex'));
     let link = readProto(data, (fieldNumber, value, result) => {
         switch (fieldNumber) {
             case 1:
@@ -126,7 +123,7 @@ function readPBLink(data) {
                 break;
             case 3:
                 // Tsize
-                result.tsize = value;
+                result.size = value;
                 break;
             default:
                 throw new Error(`Unsupported PBLink field number: ${fieldNumber}`);
@@ -156,7 +153,13 @@ function readPBNode(data) {
     return node;
 }
 
-function readCID(data) {
+const multibase = require('multibase');
+
+function cidToString(cid) {
+    return Buffer.from(multibase.encode('base32', cid)).toString('utf8');
+}
+
+function readBlock(data) {
     const cidVersion = data[0];
     assert(cidVersion === 1, `Unsupported CID version: ${cidVersion}`);
 
@@ -170,12 +173,32 @@ function readCID(data) {
 
     if (cidCodec === 0x55) {
         // raw binary
-        console.log('data', remainingData);
+
+        const hashType = remainingData[0];
+        assert(hashType === 0x12, `Unsupported hash type: ${hashType}`)
+        const hashSize = remainingData[1];
+        const hash = remainingData.subarray(2, 2 + hashSize);
+
+        const blockData = remainingData.subarray(2 + hashSize);
+
+        console.log('CID', cidToString(Buffer.concat([
+            Buffer.from([cidVersion, cidCodec]),
+            hash
+        ])));
+
+        const crypto = require('crypto');
+        const computedHash = crypto.createHash('sha256').update(blockData).digest();
+        assert(hash.equals(computedHash), 'Hash mismatch');
     } else if (cidCodec === 0x70) {
         // dag-protobuf
         try {
             const node = readPBNode(remainingData);
-            console.log('node', node);
+
+            console.log('\nlinks:');
+            for (let link of node.links) {
+                const cidStr = cidToString(link.hash);
+                console.log(`${link.name} ${link.size} ${cidStr}`);
+            }
         } catch (err) {
             console.error('Error reading PBNode', err, remainingData.toString('hex'));
         }
