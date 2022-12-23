@@ -36,7 +36,6 @@ const carFile = process.argv[2];
         console.log('Codec:', '0x' + blockInfo.codec.toString(16));
         console.log('CID:', cidToString(blockInfo.cid));
         if (blockInfo.node && blockInfo.node.links.length > 0) {
-            console.log('node', blockInfo.node)
             console.log('Links:');
             for (let link of blockInfo.node.links) {
                 console.log(`   ${link.name} (${link.size}) -> ${cidToString(link.cid)}`);
