@@ -147,8 +147,7 @@ function readPBNode(data) {
                 throw new Error(`Unsupported PBNode field number: ${fieldNumber}`);
         }
     });
-    // TODO: Figure out why first link is always not parsable as a PBLink
-    node.links = (node.links || []).slice(1).map(readPBLink);
+    node.links = (node.links || []).map(readPBLink);
 
     return node;
 }
@@ -163,36 +162,42 @@ function readBlock(data) {
     const cidVersion = data[0];
     assert(cidVersion === 1, `Unsupported CID version: ${cidVersion}`);
 
-    const cidCodec = data[1];
+    const codec = data[1];
 
     const remainingData = data.subarray(2);
 
     console.log(`CID version: ${cidVersion}`);
     // hex codec
-    console.log(`CID codec: 0x${cidCodec.toString(16)}`);
+    console.log(`codec: 0x${codec.toString(16)}`);
 
-    if (cidCodec === 0x55) {
+    const hashType = remainingData[0];
+    assert(hashType === 0x12, `Unsupported hash type: ${hashType}`)
+    const hashSize = remainingData[1];
+    const hash = remainingData.subarray(2, 2 + hashSize);
+
+    const blockData = remainingData.subarray(2 + hashSize);
+
+    console.log('CID', cidToString(Buffer.concat([
+        Buffer.from([cidVersion, codec, hashType, hashSize]),
+        hash
+    ])));
+
+    const crypto = require('crypto');
+    const computedHash = crypto.createHash('sha256').update(blockData).digest();
+    assert(hash.equals(computedHash), 'Hash mismatch');
+
+    if (codec === 0x55) {
         // raw binary
 
-        const hashType = remainingData[0];
-        assert(hashType === 0x12, `Unsupported hash type: ${hashType}`)
-        const hashSize = remainingData[1];
-        const hash = remainingData.subarray(2, 2 + hashSize);
-
-        const blockData = remainingData.subarray(2 + hashSize);
-
-        console.log('CID', cidToString(Buffer.concat([
-            Buffer.from([cidVersion, cidCodec]),
-            hash
-        ])));
-
-        const crypto = require('crypto');
-        const computedHash = crypto.createHash('sha256').update(blockData).digest();
-        assert(hash.equals(computedHash), 'Hash mismatch');
-    } else if (cidCodec === 0x70) {
+        // do nothing for now
+    } else if (codec === 0x70) {
         // dag-protobuf
+
+        // print data with xxd command line utility
+        console.log(require('child_process').execSync(`echo ${blockData.toString('hex')} | xxd -r -p | xxd`).toString('utf8'));
+
         try {
-            const node = readPBNode(remainingData);
+            const node = readPBNode(blockData);
 
             console.log('\nlinks:');
             for (let link of node.links) {
@@ -200,9 +205,9 @@ function readBlock(data) {
                 console.log(`${link.name} ${link.size} ${cidStr}`);
             }
         } catch (err) {
-            console.error('Error reading PBNode', err, remainingData.toString('hex'));
+            console.error('Error reading PBNode', err, blockData.toString('hex'));
         }
     } else {
-        throw new Error(`Unsupported multicodec: ${cidCodec}`);
+        throw new Error(`Unsupported multicodec: ${codec}`);
     }
 }
