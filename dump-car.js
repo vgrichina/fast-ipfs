@@ -1,6 +1,4 @@
-const assert = require('assert');
-
-const { readBlock, readVarint, cidToString } = require('./');
+const { readCar, readBlock, cidToString } = require('./');
 
 // Print usage info if not enough args and exit
 if (process.argv.length < 3) {
@@ -11,19 +9,8 @@ if (process.argv.length < 3) {
 const carFile = process.argv[2];
 
 (async () => {
-    // Read blocks from the CAR file
-    const blocks = [];
     const fileData = await require('fs').promises.readFile(carFile);
-    let offset = 0;
-
-    while (offset < fileData.length) {
-        const [blockLength, dataOffset] = readVarint(fileData, offset);
-        const data = fileData.subarray(dataOffset, dataOffset + blockLength);
-        blocks.push({ blockLength, data, startOffset: offset });
-
-        // Skip block
-        offset = dataOffset + blockLength;
-    }
+    const blocks = readCar(fileData);
 
     const header = blocks.shift();
     console.log('header', header);

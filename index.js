@@ -161,4 +161,21 @@ function readBlock(data) {
     }
 }
 
-module.exports = { readBlock, readVarint, cidToString };
+function readCar(fileData) {
+    // Read blocks from the CAR file
+    const blocks = [];
+    let offset = 0;
+
+    while (offset < fileData.length) {
+        const [blockLength, dataOffset] = readVarint(fileData, offset);
+        const data = fileData.subarray(dataOffset, dataOffset + blockLength);
+        blocks.push({ blockLength, data, startOffset: offset });
+
+        // Skip block
+        offset = dataOffset + blockLength;
+    }
+
+    return blocks;
+}
+
+module.exports = { readCar, readBlock, cidToString };
