@@ -154,8 +154,7 @@ function readBlock(data) {
             const node = readPBNode(blockData);
             return { cid, codec, data: blockData, node };
         } catch (err) {
-            console.error('Error reading PBNode', err, blockData.toString('hex'));
-            // TODO: Crash?
+            throw new Error(`Error reading PBNode: ${err}`);
         }
     } else {
         throw new Error(`Unsupported multicodec: ${codec}`);
