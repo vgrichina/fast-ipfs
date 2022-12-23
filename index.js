@@ -118,30 +118,29 @@ function cidToString(cid) {
     return Buffer.from(multibase.encode('base32', cid)).toString('utf8');
 }
 
-function readBlock(data) {
-    const cidVersion = data[0];
-    assert(cidVersion === 1, `Unsupported CID version: ${cidVersion}`);
+function readCID(data) {
+    const version = data[0];
+    assert(version === 1, `Unsupported CID version: ${version}`);
 
     const codec = data[1];
 
-    const remainingData = data.subarray(2);
-
-    const hashType = remainingData[0];
+    const hashType = data[2];
     assert(hashType === 0x12, `Unsupported hash type: ${hashType}`)
-    const hashSize = remainingData[1];
-    const hash = remainingData.subarray(2, 2 + hashSize);
+    const hashSize = data[3];
+    const hash = data.subarray(4, 4 + hashSize);
 
-    const blockData = remainingData.subarray(2 + hashSize);
+    return { version, codec, hashType, hash };
+}
+
+function readBlock(data) {
+    const { version: cidVersion, codec, hashType, hash } = readCID(data);
+
+    const blockData = data.subarray(4 + hash.length);
 
     const cid = Buffer.concat([
-        Buffer.from([cidVersion, codec, hashType, hashSize]),
+        Buffer.from([cidVersion, codec, hashType, hash.length]),
         hash
     ]);
-
-    // TODO: Refactor, use async when available? Make optional to check hash?
-    const crypto = require('crypto');
-    const computedHash = crypto.createHash('sha256').update(blockData).digest();
-    assert(hash.equals(computedHash), 'Hash mismatch');
 
     if (codec === 0x55) {
         // raw binary
@@ -161,6 +160,15 @@ function readBlock(data) {
     }
 }
 
+function validateBlock(cid, blockData) {
+    const { hash } = readCID(cid);
+
+    // TODO: Refactor, use async when available?
+    const crypto = require('crypto');
+    const computedHash = crypto.createHash('sha256').update(blockData).digest();
+    assert(hash.equals(computedHash), 'Hash mismatch');
+}
+
 function readCar(fileData) {
     // Read blocks from the CAR file
     const blocks = [];
@@ -178,4 +186,4 @@ function readCar(fileData) {
     return blocks;
 }
 
-module.exports = { readCar, readBlock, readPBNode, cidToString };
+module.exports = { readCar, readBlock, readPBNode, cidToString, readCID, validateBlock };

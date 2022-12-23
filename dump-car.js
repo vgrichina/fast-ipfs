@@ -1,4 +1,4 @@
-const { readCar, readBlock, cidToString } = require('./');
+const { readCar, readBlock, cidToString, validateBlock } = require('./');
 
 // Print usage info if not enough args and exit
 if (process.argv.length < 3) {
@@ -20,6 +20,8 @@ const carFile = process.argv[2];
         console.log(`\nBlock at offset ${startOffset} with length ${blockLength}`);
 
         const blockInfo = readBlock(data);
+        validateBlock(blockInfo.cid, blockInfo.data);
+
         console.log('Codec:', '0x' + blockInfo.codec.toString(16));
         console.log('CID:', cidToString(blockInfo.cid));
         if (blockInfo.node && blockInfo.node.links.length > 0) {
