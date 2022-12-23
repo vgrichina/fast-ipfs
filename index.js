@@ -178,4 +178,4 @@ function readCar(fileData) {
     return blocks;
 }
 
-module.exports = { readCar, readBlock, cidToString };
+module.exports = { readCar, readBlock, readPBNode, cidToString };
