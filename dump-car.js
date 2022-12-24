@@ -1,4 +1,4 @@
-const { readCar, readBlock, cidToString, validateBlock } = require('./');
+const { readCAR, readBlock, cidToString, validateBlock } = require('./');
 
 // Print usage info if not enough args and exit
 if (process.argv.length < 3) {
@@ -10,7 +10,7 @@ const carFile = process.argv[2];
 
 (async () => {
     const fileData = await require('fs').promises.readFile(carFile);
-    const blocks = readCar(fileData);
+    const blocks = readCAR(fileData);
 
     const header = blocks.shift();
     console.log('header', header);

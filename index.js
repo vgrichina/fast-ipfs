@@ -170,7 +170,7 @@ function validateBlock(cid, blockData) {
     assert(hash.equals(computedHash), 'Hash mismatch');
 }
 
-function readCar(fileData) {
+function readCAR(fileData) {
     // Read blocks from the CAR file
     const blocks = [];
     let offset = 0;
@@ -187,4 +187,4 @@ function readCar(fileData) {
     return blocks;
 }
 
-module.exports = { readCar, readBlock, readPBNode, cidToString, readCID, validateBlock };
+module.exports = { readCAR, readBlock, readPBNode, cidToString, readCID, validateBlock };
