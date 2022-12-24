@@ -1,7 +1,11 @@
 {
   "name": "fast-ipfs",
+  "version": "0.0.0",
   "main": "index.js",
   "dependencies": {
     "multibase": "^4.0.6"
-  }
+  },
+  "files": [
+    "*.js"
+  ]
 }
