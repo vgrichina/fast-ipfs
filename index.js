@@ -125,8 +125,9 @@ function readCID(data) {
     const codec = data[1];
 
     const hashType = data[2];
-    assert(hashType === 0x12, `Unsupported hash type: ${hashType}`)
+    assert(hashType === 0x12, `Unsupported hash type: ${hashType}. Only SHA-256 is supported.`)
     const hashSize = data[3];
+    assert(hashSize === 32, 'Wrong SHA-256 hash size');
     const hash = data.subarray(4, 4 + hashSize);
 
     return { version, codec, hashType, hash };
