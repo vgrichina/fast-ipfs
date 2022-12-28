@@ -45,3 +45,8 @@ Note that this is also available as ready to use script:
 node ./scripts/dump-car.js <car file>
 ```
 
+
+## Who uses it?
+
+- [web4-deploy](https://github.com/vgrichina/web4-deploy) - deploy your web4 dapp using NEAR and IPFS. Uses `fast-ipfs` to read CAR files and upload to NEARFS.
+- [nearfs](https://github.com/vgrichina/nearfs) - NEARFS is a file system that uses NEAR blockchain as a storage. Uses `fast-ipfs` to parse IPFS blocks.
