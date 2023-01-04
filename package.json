@@ -10,7 +10,8 @@
     "*.js"
   ],
   "scripts": {
-    "test": "tape test/*.test.js | colortape"
+    "test": "tape test/*.test.js | colortape",
+    "coverage": "npx nyc yarn test"
   },
   "devDependencies": {
     "colortape": "^0.1.2",
