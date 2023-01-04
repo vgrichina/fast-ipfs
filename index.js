@@ -1,6 +1,9 @@
 const assert = require('assert');
 const multibase = require('multibase');
 
+// NOTE: Nice TLDR on how CAR files work: https://twitter.com/ryanshahine/status/1608424335500533761
+
+
 function readVarint(data, offset) {
     let value = 0;
     let shift = 0;
