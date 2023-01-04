@@ -1,0 +1,89 @@
+const test = require('tape');
+const fs = require('fs').promises;
+
+const { readCAR, readBlock, cidToString, CODEC_RAW, CODEC_DAG_PB, validateBlock } = require('../index.js');
+
+// web4.car contains static files used by web4.near.page website
+const WEB4_CAR_FILE = './test/data/web4.car';
+
+test('split web4.car into blocks', async (t) => {
+    const carData = await fs.readFile(WEB4_CAR_FILE);
+    const rawBlocks = readCAR(carData);
+    const expectedLengths = [ 58, 11488, 392, 13382, 13815, 1613, 7833, 3616, 440, 40, 90, 95 ];
+    t.deepEqual(rawBlocks.map(b => b.blockLength), expectedLengths);
+    for (let block of rawBlocks) {
+        t.equal(block.data.length, block.blockLength);
+    }
+});
+
+test('parse and validate web4.car blocks', async (t) => {
+    const carData = await fs.readFile(WEB4_CAR_FILE);
+    const [, ...rawBlocks] = readCAR(carData);
+    for (let block of rawBlocks) {
+        const blockInfo = readBlock(block.data);
+        t.ok(blockInfo.cid);
+        t.ok(blockInfo.codec);
+        if (blockInfo.codec === CODEC_RAW) {
+            t.ok(blockInfo.data);
+        } else if (blockInfo.codec === CODEC_DAG_PB) {
+            t.ok(blockInfo.node);
+        } else {
+            t.fail(`Unexpected codec 0x${blockInfo.codec.toString(16)}`);
+        }
+        validateBlock(blockInfo.cid, blockInfo.data);
+    }
+});
+
+test('parse web4.car CIDs', async (t) => {
+    const carData = await fs.readFile(WEB4_CAR_FILE);
+    const [header, ...rawBlocks] = readCAR(carData);
+    // TODO: Parse header and check root CID
+    const blocks = rawBlocks.map(b => readBlock(b.data));
+    const cids = blocks.map(b => cidToString(b.cid));
+    const EXPECTED_CIDS = [
+        'bafkreiaqeb6w3ncofru3zqhkarwhob2hdfdygmnkmkio2njyanhsb46tba',
+        'bafkreibqdpw5vjiloxlt64mnxpyeucjwqyxy34cxmkzfqcru3gvfzixmp4',
+        'bafkreibxxxpva5lpcge263lkx6yyx3tkpkfcqwtx3ujr3lz2xcxeeqtsze',
+        'bafkreic7ra6yc55c3ych75rjdetnvmnig3l7u2ujhzloy26pkghth43cua',
+        'bafkreidndhj7jyy3upcypraiwjfs5wvwlt42bz7j3pzmwvgq3lwcmmcvjq',
+        'bafkreihu27uckd4pcjhyw7iipzpcmb3gunfqph65yq7hwigyyggkd2joke',
+        'bafkreihwzlmtjajwh4od6urlecyxw74dub7l5cnzxgc5kmbsphde2zcymu',
+        'bafybeiaqy5c3qam5kd5oafrziutpqtbltwla5lj3feydfxjsyqusu7cndi',
+        'bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354',
+        'bafybeidg3ohf4kscsf6cjbgg7vttcvu7q4olena3kwhpl5wl3trhhougyi',
+        'bafybeihgn4nvivxmd77xwr6fa6ywjtsdwwxvscrmqady5nzjf72r6bpmbe'
+    ];
+    t.deepEqual(cids, EXPECTED_CIDS);
+});
+
+test('parse web4.car links', async (t) => {
+    const carData = await fs.readFile(WEB4_CAR_FILE);
+    const [, ...rawBlocks] = readCAR(carData);
+    const blocks = rawBlocks.map(b => readBlock(b.data));
+    const blocksWithLinks = blocks.filter(b => b.node && b.node.links.length > 0).map(b => ({
+        cid: cidToString(b.cid),
+        links: b.node.links.map(l => ({ name: l.name, size: l.size, cid: cidToString(l.cid) }))
+    }));
+    t.deepEqual(blocksWithLinks, [{
+        cid: 'bafybeiaqy5c3qam5kd5oafrziutpqtbltwla5lj3feydfxjsyqusu7cndi',
+        links: [
+            { name: '_index.html', size: 13346, cid: 'bafkreibxxxpva5lpcge263lkx6yyx3tkpkfcqwtx3ujr3lz2xcxeeqtsze' },
+            { name: 'index.html', size: 13779, cid: 'bafkreic7ra6yc55c3ych75rjdetnvmnig3l7u2ujhzloy26pkghth43cua' },
+            { name: 'manifest.arkb', size: 356, cid: 'bafkreibqdpw5vjiloxlt64mnxpyeucjwqyxy34cxmkzfqcru3gvfzixmp4' },
+            { name: 'normalize.css', size: 7797, cid: 'bafkreihu27uckd4pcjhyw7iipzpcmb3gunfqph65yq7hwigyyggkd2joke' },
+            { name: 'skeleton.css', size: 11452, cid: 'bafkreiaqeb6w3ncofru3zqhkarwhob2hdfdygmnkmkio2njyanhsb46tba' },
+            { name: 'tmp.html', size: 3580, cid: 'bafkreihwzlmtjajwh4od6urlecyxw74dub7l5cnzxgc5kmbsphde2zcymu' },
+            { name: 'under-construction', size: 1636, cid: 'bafybeihgn4nvivxmd77xwr6fa6ywjtsdwwxvscrmqady5nzjf72r6bpmbe' }
+        ]
+    }, {
+        cid: 'bafybeidg3ohf4kscsf6cjbgg7vttcvu7q4olena3kwhpl5wl3trhhougyi',
+        links: [
+            { name: 'dist', size: 52350, cid: 'bafybeiaqy5c3qam5kd5oafrziutpqtbltwla5lj3feydfxjsyqusu7cndi' }
+        ]
+    }, {
+        cid: 'bafybeihgn4nvivxmd77xwr6fa6ywjtsdwwxvscrmqady5nzjf72r6bpmbe',
+        links: [
+            { name: 'index.html', size: 1577, cid: 'bafkreidndhj7jyy3upcypraiwjfs5wvwlt42bz7j3pzmwvgq3lwcmmcvjq' }
+        ]
+    }]);
+});

@@ -8,5 +8,12 @@
   },
   "files": [
     "*.js"
-  ]
+  ],
+  "scripts": {
+    "test": "tape test/*.test.js | colortape"
+  },
+  "devDependencies": {
+    "colortape": "^0.1.2",
+    "tape": "^5.6.1"
+  }
 }

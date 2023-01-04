@@ -3,6 +3,8 @@ const multibase = require('multibase');
 
 // NOTE: Nice TLDR on how CAR files work: https://twitter.com/ryanshahine/status/1608424335500533761
 
+const CODEC_RAW = 0x55;
+const CODEC_DAG_PB = 0x70;
 
 function readVarint(data, offset) {
     let value = 0;
@@ -146,11 +148,11 @@ function readBlock(data) {
         hash
     ]);
 
-    if (codec === 0x55) {
+    if (codec === CODEC_RAW) {
         // raw binary
 
         return { cid, codec, data: blockData }
-    } else if (codec === 0x70) {
+    } else if (codec === CODEC_DAG_PB) {
         // dag-protobuf
 
         try {
@@ -190,4 +192,13 @@ function readCAR(fileData) {
     return blocks;
 }
 
-module.exports = { readCAR, readBlock, readPBNode, cidToString, readCID, validateBlock };
+module.exports = {
+    readCAR,
+    readBlock, 
+    readPBNode,
+    readCID, 
+    cidToString, 
+    validateBlock,
+    CODEC_RAW,
+    CODEC_DAG_PB,
+};
