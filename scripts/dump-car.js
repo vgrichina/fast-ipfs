@@ -1,4 +1,4 @@
-const { readCAR, readBlock, cidToString, validateBlock } = require('./');
+const { readCAR, readBlock, cidToString, validateBlock } = require('../');
 
 // Print usage info if not enough args and exit
 if (process.argv.length < 3) {
