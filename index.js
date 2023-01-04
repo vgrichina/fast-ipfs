@@ -130,7 +130,7 @@ function readCID(data) {
             version: 0,
             codec: CODEC_DAG_PB,
             hashType: 0x12,
-            hash: data.subarray(2)
+            hash: data.subarray(2, 2 + 0x20)
         };
     }
 
@@ -148,15 +148,25 @@ function readCID(data) {
     return { version, codec, hashType, hash };
 }
 
-function readBlock(data) {
-    const { version: cidVersion, codec, hashType, hash } = readCID(data);
+function packCID({ version, codec, hashType, hash }) {
+    if (version === 0) {
+        return Buffer.concat([
+            Buffer.from([0x12, 0x20]),
+            hash
+        ]);
+    }
 
-    const blockData = data.subarray(4 + hash.length);
-
-    const cid = Buffer.concat([
-        Buffer.from([cidVersion, codec, hashType, hash.length]),
+    return Buffer.concat([
+        Buffer.from([version, codec, hashType, hash.length]),
         hash
     ]);
+}
+
+function readBlock(data) {
+    const { version, codec, hashType, hash } = readCID(data);
+
+    const cid = packCID({ version, codec, hashType, hash });
+    const blockData = data.subarray(cid.length);
 
     if (codec === CODEC_RAW) {
         // raw binary

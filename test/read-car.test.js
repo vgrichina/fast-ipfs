@@ -3,21 +3,11 @@ const fs = require('fs').promises;
 
 const { readCAR, readBlock, cidToString, CODEC_RAW, CODEC_DAG_PB, validateBlock } = require('../index.js');
 
-// web4.car contains static files used by web4.near.page website
-const WEB4_CAR_FILE = './test/data/web4.car';
+// hello.car contains a single block with a single string, but encoded as a DAG-PB node
+const HELLO_CAR_FILE = './test/data/hello.car';
 
-test('split web4.car into blocks', async (t) => {
-    const carData = await fs.readFile(WEB4_CAR_FILE);
-    const rawBlocks = readCAR(carData);
-    const expectedLengths = [ 58, 11488, 392, 13382, 13815, 1613, 7833, 3616, 440, 40, 90, 95 ];
-    t.deepEqual(rawBlocks.map(b => b.blockLength), expectedLengths);
-    for (let block of rawBlocks) {
-        t.equal(block.data.length, block.blockLength);
-    }
-});
-
-test('parse and validate web4.car blocks', async (t) => {
-    const carData = await fs.readFile(WEB4_CAR_FILE);
+async function parseAndValidate(t, carFile) {
+    const carData = await fs.readFile(carFile);
     const [, ...rawBlocks] = readCAR(carData);
     for (let block of rawBlocks) {
         const blockInfo = readBlock(block.data);
@@ -32,6 +22,47 @@ test('parse and validate web4.car blocks', async (t) => {
         }
         validateBlock(blockInfo.cid, blockInfo.data);
     }
+}
+
+test('split hello.car into blocks', async (t) => {
+    const carData = await fs.readFile(HELLO_CAR_FILE);
+    const rawBlocks = readCAR(carData);
+    const expectedLengths = [ 56, 55 ];
+    t.deepEqual(rawBlocks.map(b => b.blockLength), expectedLengths);
+    for (let block of rawBlocks) {
+        t.equal(block.data.length, block.blockLength);
+    }
+});
+
+test('parse and validate hello.car blocks', async (t) => {
+    await parseAndValidate(t, HELLO_CAR_FILE);
+});
+
+test('parse hello.car block content', async (t) => {
+    const carData = await fs.readFile(HELLO_CAR_FILE);
+    const [, rawBlock] = readCAR(carData);
+    const blockInfo = readBlock(rawBlock.data);
+    t.equal(blockInfo.codec, CODEC_DAG_PB);
+    // TODO: Figure out how to parse inside the DAG-PB node data
+    t.equal(blockInfo.node.data.toString('utf8'), '\b\x02\x12\rHello, World\n\x18\r');
+    t.deepEqual(blockInfo.node.links, []);
+});
+
+// web4.car contains static files used by web4.near.page website
+const WEB4_CAR_FILE = './test/data/web4.car';
+
+test('split web4.car into blocks', async (t) => {
+    const carData = await fs.readFile(WEB4_CAR_FILE);
+    const rawBlocks = readCAR(carData);
+    const expectedLengths = [ 58, 11488, 392, 13382, 13815, 1613, 7833, 3616, 440, 40, 90, 95 ];
+    t.deepEqual(rawBlocks.map(b => b.blockLength), expectedLengths);
+    for (let block of rawBlocks) {
+        t.equal(block.data.length, block.blockLength);
+    }
+});
+
+test('parse and validate web4.car blocks', async (t) => {
+    await parseAndValidate(t, WEB4_CAR_FILE);
 });
 
 test('parse web4.car CIDs', async (t) => {
