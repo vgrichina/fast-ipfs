@@ -124,6 +124,16 @@ function cidToString(cid) {
 }
 
 function readCID(data) {
+    if (data[0] == 0x12 && data[1] == 0x20) {
+        // CIDv0
+        return {
+            version: 0,
+            codec: CODEC_DAG_PB,
+            hashType: 0x12,
+            hash: data.subarray(2)
+        };
+    }
+
     const version = data[0];
     assert(version === 1, `Unsupported CID version: ${version}`);
 
