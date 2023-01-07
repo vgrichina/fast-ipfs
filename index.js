@@ -119,6 +119,56 @@ function readPBNode(data) {
     return node;
 }
 
+// message Data {
+// 	enum DataType {
+// 		Raw = 0;
+// 		Directory = 1;
+// 		File = 2;
+// 		Metadata = 3;
+// 		Symlink = 4;
+// 		HAMTShard = 5;
+// 	}
+
+// 	required DataType Type = 1;
+// 	optional bytes Data = 2;
+// 	optional uint64 filesize = 3;
+// 	repeated uint64 blocksizes = 4;
+
+// 	optional uint64 hashType = 5;
+// 	optional uint64 fanout = 6;
+// }
+
+// message Metadata {
+// 	optional string MimeType = 1;
+// }
+
+
+// See https://medium.com/@koivunej/the-road-to-unixfs-f3cf5222b2ef
+// https://github.com/ipfs/kubo/blob/b3faaad1310bcc32dc3dd24e1919e9edf51edba8/unixfs/pb/unixfs.proto#L3
+
+function readUnixFSData(data) {
+    const result = readProto(data, (fieldNumber, value, result) => {
+        switch (fieldNumber) {
+            case 1:
+                // Type
+                result.type = value;
+                break;
+            case 2:
+                // Data
+                result.data = value;
+                break;
+            case 3:
+                // File size
+                result.fileSize = value;
+                break;
+            default:
+                // NOTE: Just ignore other fields, given kubo didn't use them
+        }
+    });
+    return result;
+}
+
+
 function cidToString(cid) {
     return Buffer.from(multibase.encode('base32', cid)).toString('utf8');
 }
@@ -216,6 +266,7 @@ module.exports = {
     readCAR,
     readBlock, 
     readPBNode,
+    readUnixFSData,
     readCID, 
     cidToString, 
     validateBlock,

@@ -1,7 +1,7 @@
 const test = require('tape');
 const fs = require('fs').promises;
 
-const { readCAR, readBlock, cidToString, CODEC_RAW, CODEC_DAG_PB, validateBlock } = require('../index.js');
+const { readCAR, readBlock, cidToString, CODEC_RAW, CODEC_DAG_PB, validateBlock, readUnixFSData } = require('../index.js');
 
 // hello.car contains a single block with a single string, but encoded as a DAG-PB node
 const HELLO_CAR_FILE = './test/data/hello.car';
@@ -43,8 +43,8 @@ test('parse hello.car block content', async (t) => {
     const [, rawBlock] = readCAR(carData);
     const blockInfo = readBlock(rawBlock.data);
     t.equal(blockInfo.codec, CODEC_DAG_PB);
-    // TODO: Figure out how to parse inside the DAG-PB node data
-    t.equal(blockInfo.node.data.toString('utf8'), '\b\x02\x12\rHello, World\n\x18\r');
+    const blockData = readUnixFSData(blockInfo.node.data);
+    t.equal(blockData.data.toString('utf8'), 'Hello, World\n');
     t.deepEqual(blockInfo.node.links, []);
 });
 
