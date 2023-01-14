@@ -198,7 +198,9 @@ function readCID(data) {
     return { version, codec, hashType, hash };
 }
 
-function packCID({ version, codec, hashType, hash }) {
+function packCID({ version = 1, codec = CODEC_RAW, hashType = 0x12, hash }) {
+    assert(hash.length === 32, 'Wrong SHA-256 hash size');
+
     if (version === 0) {
         return Buffer.concat([
             Buffer.from([0x12, 0x20]),
@@ -268,6 +270,7 @@ module.exports = {
     readPBNode,
     readUnixFSData,
     readCID, 
+    packCID,
     cidToString, 
     validateBlock,
     CODEC_RAW,
