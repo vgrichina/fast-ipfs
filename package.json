@@ -1,6 +1,6 @@
 {
   "name": "fast-ipfs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "index.js",
   "description": "A set of tools for working with IPFS, optimized for speed and size",
   "dependencies": {
