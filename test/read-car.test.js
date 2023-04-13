@@ -1,7 +1,7 @@
 const test = require('tape');
 const fs = require('fs').promises;
 
-const { readCAR, readBlock, cidToString, CODEC_RAW, CODEC_DAG_PB, validateBlock, readUnixFSData } = require('../index.js');
+const { readCAR, readBlock, cidToString, CODEC_RAW, CODEC_DAG_PB, validateBlock, readUnixFSData, writePBNode, stringToCid } = require('../index.js');
 
 // hello.car contains a single block with a single string, but encoded as a DAG-PB node
 const HELLO_CAR_FILE = './test/data/hello.car';
@@ -87,6 +87,29 @@ test('parse web4.car CIDs', async (t) => {
     t.deepEqual(cids, EXPECTED_CIDS);
 });
 
+const EXPECTED_BLOCKS = [{
+    cid: 'bafybeiaqy5c3qam5kd5oafrziutpqtbltwla5lj3feydfxjsyqusu7cndi',
+    links: [
+        { name: '_index.html', size: 13346, cid: 'bafkreibxxxpva5lpcge263lkx6yyx3tkpkfcqwtx3ujr3lz2xcxeeqtsze' },
+        { name: 'index.html', size: 13779, cid: 'bafkreic7ra6yc55c3ych75rjdetnvmnig3l7u2ujhzloy26pkghth43cua' },
+        { name: 'manifest.arkb', size: 356, cid: 'bafkreibqdpw5vjiloxlt64mnxpyeucjwqyxy34cxmkzfqcru3gvfzixmp4' },
+        { name: 'normalize.css', size: 7797, cid: 'bafkreihu27uckd4pcjhyw7iipzpcmb3gunfqph65yq7hwigyyggkd2joke' },
+        { name: 'skeleton.css', size: 11452, cid: 'bafkreiaqeb6w3ncofru3zqhkarwhob2hdfdygmnkmkio2njyanhsb46tba' },
+        { name: 'tmp.html', size: 3580, cid: 'bafkreihwzlmtjajwh4od6urlecyxw74dub7l5cnzxgc5kmbsphde2zcymu' },
+        { name: 'under-construction', size: 1636, cid: 'bafybeihgn4nvivxmd77xwr6fa6ywjtsdwwxvscrmqady5nzjf72r6bpmbe' }
+    ]
+}, {
+    cid: 'bafybeidg3ohf4kscsf6cjbgg7vttcvu7q4olena3kwhpl5wl3trhhougyi',
+    links: [
+        { name: 'dist', size: 52350, cid: 'bafybeiaqy5c3qam5kd5oafrziutpqtbltwla5lj3feydfxjsyqusu7cndi' }
+    ]
+}, {
+    cid: 'bafybeihgn4nvivxmd77xwr6fa6ywjtsdwwxvscrmqady5nzjf72r6bpmbe',
+    links: [
+        { name: 'index.html', size: 1577, cid: 'bafkreidndhj7jyy3upcypraiwjfs5wvwlt42bz7j3pzmwvgq3lwcmmcvjq' }
+    ]
+}];
+
 test('parse web4.car links', async (t) => {
     const carData = await fs.readFile(WEB4_CAR_FILE);
     const [, ...rawBlocks] = readCAR(carData);
@@ -95,26 +118,31 @@ test('parse web4.car links', async (t) => {
         cid: cidToString(b.cid),
         links: b.node.links.map(l => ({ name: l.name, size: l.size, cid: cidToString(l.cid) }))
     }));
-    t.deepEqual(blocksWithLinks, [{
-        cid: 'bafybeiaqy5c3qam5kd5oafrziutpqtbltwla5lj3feydfxjsyqusu7cndi',
-        links: [
-            { name: '_index.html', size: 13346, cid: 'bafkreibxxxpva5lpcge263lkx6yyx3tkpkfcqwtx3ujr3lz2xcxeeqtsze' },
-            { name: 'index.html', size: 13779, cid: 'bafkreic7ra6yc55c3ych75rjdetnvmnig3l7u2ujhzloy26pkghth43cua' },
-            { name: 'manifest.arkb', size: 356, cid: 'bafkreibqdpw5vjiloxlt64mnxpyeucjwqyxy34cxmkzfqcru3gvfzixmp4' },
-            { name: 'normalize.css', size: 7797, cid: 'bafkreihu27uckd4pcjhyw7iipzpcmb3gunfqph65yq7hwigyyggkd2joke' },
-            { name: 'skeleton.css', size: 11452, cid: 'bafkreiaqeb6w3ncofru3zqhkarwhob2hdfdygmnkmkio2njyanhsb46tba' },
-            { name: 'tmp.html', size: 3580, cid: 'bafkreihwzlmtjajwh4od6urlecyxw74dub7l5cnzxgc5kmbsphde2zcymu' },
-            { name: 'under-construction', size: 1636, cid: 'bafybeihgn4nvivxmd77xwr6fa6ywjtsdwwxvscrmqady5nzjf72r6bpmbe' }
-        ]
-    }, {
-        cid: 'bafybeidg3ohf4kscsf6cjbgg7vttcvu7q4olena3kwhpl5wl3trhhougyi',
-        links: [
-            { name: 'dist', size: 52350, cid: 'bafybeiaqy5c3qam5kd5oafrziutpqtbltwla5lj3feydfxjsyqusu7cndi' }
-        ]
-    }, {
-        cid: 'bafybeihgn4nvivxmd77xwr6fa6ywjtsdwwxvscrmqady5nzjf72r6bpmbe',
-        links: [
-            { name: 'index.html', size: 1577, cid: 'bafkreidndhj7jyy3upcypraiwjfs5wvwlt42bz7j3pzmwvgq3lwcmmcvjq' }
-        ]
-    }]);
+    t.deepEqual(blocksWithLinks, EXPECTED_BLOCKS);
+});
+
+test('generate blocks with links like web4.car', async (t) => {
+    const carData = await fs.readFile(WEB4_CAR_FILE);
+    const [, ...rawBlocks] = readCAR(carData);
+    const blocksWithLinks = rawBlocks.map(b => readBlock(b.data)).filter(b => b.node && b.node.links.length > 0);
+    const BLOCKS = EXPECTED_BLOCKS.map(b => ({
+        links: b.links.map(l => ({
+            name: l.name,
+            size: l.size,
+            cid: stringToCid(l.cid)
+        })),
+        data: Buffer.from([8, 1]) // TODO: Why this data needed to match?
+    }));
+
+    const UNDER_CONSTRUCTION = BLOCKS[2];
+    const underConstructionData = writePBNode(UNDER_CONSTRUCTION);
+    t.equal(underConstructionData.toString('hex'), blocksWithLinks[2].data.toString('hex'));
+
+    const ROOT = BLOCKS[1];
+    const rootData = writePBNode(ROOT);
+    t.equal(rootData.toString('hex'), blocksWithLinks[1].data.toString('hex'));
+
+    const DIST = BLOCKS[0];
+    const distData = writePBNode(DIST);
+    t.equal(distData.toString('hex'), blocksWithLinks[0].data.toString('hex'));
 });
